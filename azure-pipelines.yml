@@ -18,7 +18,7 @@ variables:
   dotnetVersion: '8.0.x'
 
   # Discord webhook
-  DISCORD_WEBHOOK: 'https://discord.com/api/webhooks/SEU_WEBHOOK_AQUI'
+  DISCORD_WEBHOOK: 'https://discord.com/api/webhooks/https://discord.com/api/webhooks/1486600130986639391/jxMZrXnyAOugCfbcr8h_4JvSMmOQ4AwHseyG0bU5wbqt2a1CDThX3EmZhqbKUUotQ5Ht'
 
   # SonarCloud
   sonarServiceConnection: 'sc-sonarcloud'
