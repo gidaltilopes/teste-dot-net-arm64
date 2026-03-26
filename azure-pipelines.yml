@@ -17,7 +17,7 @@ variables:
   buildConfiguration: 'Release'
   dotnetVersion: '8.0.x'
 
-  # Discord webhook (ideal: trocar por secret variable no Azure DevOps)
+  # Discord webhook
   DISCORD_WEBHOOK: 'https://discord.com/api/webhooks/SEU_WEBHOOK_AQUI'
 
   # SonarCloud
@@ -26,7 +26,7 @@ variables:
   sonarProjectKey: 'gidaltilopes_teste-dot-net-arm64'
   sonarProjectName: 'teste-dot-net-arm64'
 
-  # Container / ACR
+  # ACR
   dockerRegistryServiceConnection: 'sc-acr'
   containerRegistry: 'testedotnet.azurecr.io'
   imageRepository: 'hello-world-arm64'
@@ -48,7 +48,7 @@ stages:
   displayName: 'Build'
   jobs:
   - job: BuildJob
-    displayName: 'Build .NET Application'
+    displayName: 'Build .NET'
     steps:
     - checkout: self
 
@@ -117,7 +117,7 @@ stages:
   condition: succeeded()
   jobs:
   - job: DockerJob
-    displayName: 'Build ARM64 Docker Image'
+    displayName: 'Docker Buildx ARM64'
     steps:
     - checkout: self
 
