@@ -1,0 +1,10 @@
+﻿C:\Users\Gidal\pipeline2\Program.cs
+C:\Users\Gidal\pipeline2\obj\Debug\net8.0\HelloWorld.GlobalUsings.g.cs
+C:\Users\Gidal\pipeline2\obj\Debug\net8.0\.NETCoreApp,Version=v8.0.AssemblyAttributes.cs
+C:\Users\Gidal\pipeline2\obj\Debug\net8.0\HelloWorld.AssemblyInfo.cs
+C:\Users\Gidal\pipeline2\.gitignore
+C:\Users\Gidal\pipeline2\azure-pipelines.yml
+C:\Users\Gidal\pipeline2\Dockerfile
+C:\Users\Gidal\pipeline2\k8s\deployment.yaml
+C:\Users\Gidal\pipeline2\k8s\ingress.yaml
+C:\Users\Gidal\pipeline2\k8s\service.yaml

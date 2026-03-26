@@ -17,14 +17,14 @@ variables:
   buildConfiguration: 'Release'
   dotnetVersion: '8.0.x'
 
-  # Discord webhook (coloque como secret depois)
+  # Discord webhook (ideal: trocar por secret variable no Azure DevOps)
   DISCORD_WEBHOOK: 'https://discord.com/api/webhooks/SEU_WEBHOOK_AQUI'
 
   # SonarCloud
   sonarServiceConnection: 'sc-sonarcloud'
   sonarOrganization: 'gidaltilopes'
-  sonarProjectKey: 'gidaltilopes_teste-dot-net'
-  sonarProjectName: 'teste-dot-net'
+  sonarProjectKey: 'gidaltilopes_teste-dot-net-arm64'
+  sonarProjectName: 'teste-dot-net-arm64'
 
   # Container / ACR
   dockerRegistryServiceConnection: 'sc-acr'
@@ -40,18 +40,15 @@ variables:
 
   # Paths
   appProject: 'HelloWorld.csproj'
-  testProjects: 'tests/**/*.csproj'
   dockerfilePath: '$(Build.SourcesDirectory)/Dockerfile'
 
 stages:
 
-# =====================
-# BUILD
-# =====================
 - stage: Build
   displayName: 'Build'
   jobs:
   - job: BuildJob
+    displayName: 'Build .NET Application'
     steps:
     - checkout: self
 
@@ -74,15 +71,13 @@ stages:
         projects: '$(appProject)'
         arguments: '--configuration $(buildConfiguration) --no-restore'
 
-# =====================
-# TEST + SONAR
-# =====================
-- stage: Test
-  displayName: 'Test'
+- stage: Analyze
+  displayName: 'Analyze with SonarCloud'
   dependsOn: Build
   condition: succeeded()
   jobs:
-  - job: TestJob
+  - job: SonarJob
+    displayName: 'SonarCloud Analysis'
     steps:
     - checkout: self
 
@@ -93,6 +88,7 @@ stages:
         version: '$(dotnetVersion)'
 
     - task: SonarCloudPrepare@4
+      displayName: 'Prepare SonarCloud'
       inputs:
         SonarCloud: '$(sonarServiceConnection)'
         organization: '$(sonarOrganization)'
@@ -101,34 +97,27 @@ stages:
         projectName: '$(sonarProjectName)'
 
     - task: DotNetCoreCLI@2
-      displayName: 'Build for test'
+      displayName: 'Build for Sonar'
       inputs:
         command: 'build'
         projects: '$(appProject)'
         arguments: '--configuration $(buildConfiguration)'
 
-    - task: DotNetCoreCLI@2
-      displayName: 'Run tests'
-      inputs:
-        command: 'test'
-        projects: '$(testProjects)'
-        arguments: '--configuration $(buildConfiguration) --no-build'
-        publishTestResults: true
-
     - task: SonarCloudAnalyze@4
+      displayName: 'Run SonarCloud Analysis'
+
     - task: SonarCloudPublish@4
+      displayName: 'Publish Quality Gate'
       inputs:
         pollingTimeoutSec: '300'
 
-# =====================
-# PACKAGE ARM64
-# =====================
 - stage: Package
-  displayName: 'Build and Push ARM64'
-  dependsOn: Test
+  displayName: 'Build and Push ARM64 Image'
+  dependsOn: Analyze
   condition: succeeded()
   jobs:
   - job: DockerJob
+    displayName: 'Build ARM64 Docker Image'
     steps:
     - checkout: self
 
@@ -149,22 +138,20 @@ stages:
           -t $(containerRegistry)/$(imageRepository):latest \
           --push \
           .
-      displayName: 'Buildx ARM64 and push'
+      displayName: 'Buildx ARM64 and Push'
 
-# =====================
-# DEPLOY AKS
-# =====================
 - stage: Deploy
   displayName: 'Deploy to AKS'
   dependsOn: Package
   condition: succeeded()
   jobs:
   - job: DeployJob
+    displayName: 'Deploy Kubernetes Manifests'
     steps:
     - checkout: self
 
     - task: AzureCLI@2
-      displayName: 'Deploy manifests'
+      displayName: 'Get AKS credentials and deploy'
       inputs:
         azureSubscription: '$(azureSubscription)'
         scriptType: 'bash'
@@ -175,44 +162,49 @@ stages:
             --name $(aksClusterName) \
             --overwrite-existing
 
-          kubectl apply -f k8s/deployment.yaml
-          kubectl apply -f k8s/service.yaml
-          kubectl apply -f k8s/ingress.yaml
+          kubectl apply -n $(kubernetesNamespace) -f k8s/deployment.yaml
+          kubectl apply -n $(kubernetesNamespace) -f k8s/service.yaml
+          kubectl apply -n $(kubernetesNamespace) -f k8s/ingress.yaml
 
           kubectl rollout status deployment/hello-world-arm64 -n $(kubernetesNamespace)
+          kubectl get pods -n $(kubernetesNamespace)
+          kubectl get svc -n $(kubernetesNamespace)
+          kubectl get ingress -n $(kubernetesNamespace)
 
-# =====================
-# DISCORD SUCCESS
-# =====================
 - stage: Notify_Success
   displayName: 'Notify Discord Success'
   dependsOn: Deploy
   condition: succeeded()
   jobs:
-  - job: Notify
+  - job: NotifySuccessJob
+    displayName: 'Send Success Notification'
     steps:
     - script: |
         curl -H "Content-Type: application/json" \
         -X POST \
         -d "{
-          \"content\": \"✅ SUCCESS\nBuild: $(Build.BuildId)\nBranch: $(Build.SourceBranchName)\nRepo: $(Build.Repository.Name)\"
+          \"content\": \"✅ SUCCESS\nBuild: $(Build.BuildId)\nBranch: $(Build.SourceBranchName)\nRepo: $(Build.Repository.Name)\nPipeline: $(System.DefinitionName)\"
         }" \
-        $(DISCORD_WEBHOOK)
+        "$(DISCORD_WEBHOOK)"
+      displayName: 'Send Discord Success'
 
-# =====================
-# DISCORD FAILURE
-# =====================
 - stage: Notify_Failure
   displayName: 'Notify Discord Failure'
-  dependsOn: Deploy
+  dependsOn:
+    - Build
+    - Analyze
+    - Package
+    - Deploy
   condition: failed()
   jobs:
-  - job: Notify
+  - job: NotifyFailureJob
+    displayName: 'Send Failure Notification'
     steps:
     - script: |
         curl -H "Content-Type: application/json" \
         -X POST \
         -d "{
-          \"content\": \"❌ FAILED\nBuild: $(Build.BuildId)\nBranch: $(Build.SourceBranchName)\nRepo: $(Build.Repository.Name)\"
+          \"content\": \"❌ FAILED\nBuild: $(Build.BuildId)\nBranch: $(Build.SourceBranchName)\nRepo: $(Build.Repository.Name)\nPipeline: $(System.DefinitionName)\"
         }" \
-        $(DISCORD_WEBHOOK)
+        "$(DISCORD_WEBHOOK)"
+      displayName: 'Send Discord Failure'

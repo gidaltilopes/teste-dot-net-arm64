@@ -1,0 +1,7 @@
+organization=gidaltilopes
+projectKey=gidaltilopes_teste-dot-net-arm64
+serverUrl=https://sonarcloud.io
+serverVersion=8.0.0.84080
+dashboardUrl=https://sonarcloud.io/dashboard?id=gidaltilopes_teste-dot-net-arm64
+ceTaskId=AZ0rXwE3VIJq_lC8cSZV
+ceTaskUrl=https://sonarcloud.io/api/ce/task?id=AZ0rXwE3VIJq_lC8cSZV
