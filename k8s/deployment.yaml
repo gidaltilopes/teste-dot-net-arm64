@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hello-world-arm64
+  labels:
+    app: hello-world-arm64
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: hello-world-arm64
+  template:
+    metadata:
+      labels:
+        app: hello-world-arm64
+    spec:
+      nodeSelector:
+        kubernetes.io/arch: arm64
+      containers:
+        - name: hello-world-arm64
+          image: testedotnet.azurecr.io/hello-world-arm64:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 80
+          env:
+            - name: AzureWebJobsStorage
+              value: "UseDevelopmentStorage=true"
+            - name: FUNCTIONS_WORKER_RUNTIME
+              value: "dotnet-isolated"
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 60
+            periodSeconds: 30
+          resources:
+            requests:
+              cpu: "10m"
+              memory: "64Mi"
+            limits:
+              cpu: "200m"
+              memory: "256Mi"

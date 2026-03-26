@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: hello-world-arm64-svc
+  labels:
+    app: hello-world-arm64
+spec:
+  type: ClusterIP
+  selector:
+    app: hello-world-arm64
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
