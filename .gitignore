@@ -266,3 +266,5 @@ __pycache__/
 
 bin/
 obj/
+sonarqube/
+.sonarqube/
